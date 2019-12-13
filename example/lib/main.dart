@@ -40,6 +40,8 @@ class _MyHomePageState extends State<MyHomePage> {
         title: 'Title',
         description: 'Description',
         gravity: EdgeAlert.TOP,
+        dismissButton: true,
+        duration: 10,
         backgroundColor: Colors.red);
   }
 

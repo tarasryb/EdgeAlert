@@ -16,6 +16,7 @@ class EdgeAlert {
       int duration,
       int gravity,
       Color backgroundColor,
+      bool dismissButton,
       IconData icon}) {
     OverlayView.createView(context,
         title: title,
@@ -23,6 +24,7 @@ class EdgeAlert {
         duration: duration,
         gravity: gravity,
         backgroundColor: backgroundColor,
+        dismissButton: dismissButton,
         icon: icon);
   }
 }
@@ -38,7 +40,7 @@ class OverlayView {
 
   static OverlayState _overlayState;
   static OverlayEntry _overlayEntry;
-  static bool _isVisible = false;
+  static bool isVisible = false;
 
   static void createView(BuildContext context,
       {String title,
@@ -46,11 +48,12 @@ class OverlayView {
       int duration,
       int gravity,
       Color backgroundColor,
+      bool dismissButton,
       IconData icon}) {
     _overlayState = Navigator.of(context).overlay;
 
-    if (!_isVisible) {
-      _isVisible = true;
+    if (!isVisible) {
+      isVisible = true;
 
       _overlayEntry = OverlayEntry(builder: (context) {
         return EdgeOverlay(
@@ -60,6 +63,7 @@ class OverlayView {
           gravity: gravity == null ? EdgeAlert.TOP : gravity,
           backgroundColor:
               backgroundColor == null ? Colors.grey : backgroundColor,
+          dismissButton: dismissButton == null ? false : dismissButton,
           icon: icon == null ? Icons.notifications : icon,
         );
       });
@@ -69,10 +73,10 @@ class OverlayView {
   }
 
   static dismiss() async {
-    if (!_isVisible) {
+    if (!isVisible) {
       return;
     }
-    _isVisible = false;
+    isVisible = false;
     _overlayEntry?.remove();
   }
 }
@@ -80,6 +84,7 @@ class OverlayView {
 class EdgeOverlay extends StatefulWidget {
   final String title;
   final String description;
+  final bool dismissButton;
   final int overlayDuration;
   final int gravity;
   final Color backgroundColor;
@@ -88,6 +93,7 @@ class EdgeOverlay extends StatefulWidget {
   EdgeOverlay(
       {this.title,
       this.description,
+      this.dismissButton = false,
       this.overlayDuration,
       this.gravity,
       this.backgroundColor,
@@ -129,9 +135,11 @@ class _EdgeOverlayState extends State<EdgeOverlay>
     _controller.addStatusListener((listener) async {
       if (listener == AnimationStatus.completed) {
         await Future.delayed(Duration(seconds: widget.overlayDuration));
-        _controller.reverse();
-        await Future.delayed(Duration(milliseconds: 700));
-        OverlayView.dismiss();
+        if(OverlayView.isVisible) {
+          _controller.reverse();
+          await Future.delayed(Duration(milliseconds: 700));
+          OverlayView.dismiss();
+        }
       }
     });
   }
@@ -163,6 +171,7 @@ class _EdgeOverlayState extends State<EdgeOverlay>
           child: OverlayWidget(
             title: widget.title,
             description: widget.description,
+            dismissButton: widget.dismissButton,
             iconData: widget.icon,
           ),
         ),
@@ -174,39 +183,66 @@ class _EdgeOverlayState extends State<EdgeOverlay>
 class OverlayWidget extends StatelessWidget {
   final String title;
   final String description;
+  final bool dismissButton;
   final IconData iconData;
 
-  OverlayWidget({this.title = '', this.description = '', this.iconData});
+  OverlayWidget({this.title = '', this.description = '', this.dismissButton = false, this.iconData});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: Row(
+      child: Column(
         children: <Widget>[
-          AnimatedIcon(iconData: iconData),
-          Padding(padding: EdgeInsets.only(right: 15)),
-          Expanded(
-              child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: <Widget>[
-              title == null
-                  ? Container()
-                  : Padding(
-                      padding: EdgeInsets.only(bottom: 10),
-                      child: Text(
-                        title,
-                        style: TextStyle(color: Colors.white, fontSize: 22),
-                      ),
-                    ),
-              description == null
-                  ? Container()
-                  : Text(
-                      description,
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                    )
+              AnimatedIcon(iconData: iconData),
+              Padding(padding: EdgeInsets.only(right: 15)),
+              Expanded(
+                  child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  title == null
+                      ? Container()
+                      : Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            title,
+                            style: TextStyle(color: Colors.white, fontSize: 22),
+                          ),
+                        ),
+                  description == null
+                      ? Container()
+                      : Text(
+                          description,
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                ],
+              )),
             ],
-          )),
+          ),
+          dismissButton
+          ? Row(
+            children: <Widget>[
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(0.0),
+                  child: RaisedButton(
+                    color: Colors.green,
+                    child: Text('Dismiss',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    elevation: 0,
+                    onPressed: ()async{
+                      OverlayView.dismiss();
+                    },
+                  ),
+                ),
+              ),
+            ],
+          )
+          : Container(),
+
         ],
       ),
     );
